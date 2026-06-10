@@ -1,7 +1,7 @@
 # Charte d'utilisation de Claude — GSInformatique SA
 
 > **Version 1.0** · Document vivant. Toute proposition d'amendement passe par une PR sur ce fichier.
-> Complète la [Charte GitHub](charte-github-gsinformatique.md) et la [Charte BMad](charte-bmad-gsinformatique.md) — les trois s'appliquent ensemble.
+> Complète les chartes [GitHub](charte-github-gsinformatique.md), [BMad](charte-bmad-gsinformatique.md) et [Stack web](charte-stack-web-gsinformatique.md) — les quatre s'appliquent ensemble.
 > **Périmètre : le développement.** L'usage bureautique de Claude (offres, documents, e-mails) sera traité dans un document séparé.
 
 ## Objectif
