@@ -1,6 +1,7 @@
 # Charte d'utilisation GitHub — GSInformatique SA
 
-> **Version 1.0** · Document vivant. Toute proposition d'amendement passe par une PR sur ce fichier.
+> **Version 1.1** · Document vivant. Toute proposition d'amendement passe par une PR sur ce fichier.
+> Voir aussi la [Charte Claude](charte-claude-gsinformatique.md) pour le développement assisté par IA.
 
 ## Objectif
 
@@ -68,7 +69,8 @@ docs(dette-technique): close BACKFILL-DUAL-MUTATIONS
 
 ### Review
 
-- **Au moins 1 review approuvée** avant merge. C'est non négociable, y compris pour les profils seniors : la review est aussi un outil de partage de connaissance dans une équipe hétérogène.
+- **Au moins 1 review approuvée** avant merge. C'est non négociable, y compris pour les profils seniors.
+- *(Amendement v1.1)* La review peut être portée par une **revue LLM croisée** (un modèle différent de celui qui a écrit le code relit et approuve), tracée dans l'historique Git — conditions et traçabilité dans la [Charte Claude §3](charte-claude-gsinformatique.md#3-review--responsabilité). La review humaine reste précieuse comme outil de partage de connaissance dans une équipe hétérogène, et reste requise sur les sujets sensibles listés dans le `CLAUDE.md` du dépôt.
 - Le reviewer relit le **quoi** et le **comment**, pas seulement la syntaxe.
 - En cas de désaccord bloquant, on tranche en synchrone (visio courte) plutôt qu'en fil de commentaires interminable.
 
