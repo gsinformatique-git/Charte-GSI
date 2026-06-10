@@ -1,6 +1,7 @@
 # Charte d'utilisation GitHub — GSInformatique SA
 
 > **Version 1.1** · Document vivant. Toute proposition d'amendement passe par une PR sur ce fichier.
+> **Dernière modification :** 2026-06-10 · Daniel Vallon <!-- ligne mise à jour automatiquement par le workflow GitHub -->
 > Voir aussi la [Charte Claude](charte-claude-gsinformatique.md) pour le développement assisté par IA.
 
 ## Objectif
