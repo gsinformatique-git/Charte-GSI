@@ -47,10 +47,6 @@ Les invariants que toute app respecte — le détail exhaustif vit dans le `proj
 - **Langue** : français métier / anglais techno dans le code (`civilites`, `findContactById`) ; doc, commits et messages utilisateur **100 % français**.
 - **IDs** : `BigInt @id` pour les entités métier (sérialisées en `string` côté API) ; `String cuid` pour `User`.
 - **Financier** : `Decimal` Prisma — jamais `number` JS ; devises ISO 4217, locales BCP 47.
-- **Cycle de vie des entités — 3 mécanismes strictement séparés** :
-  - référentiels → flag `estSelectionnable` ;
-  - transactionnel → champ `statut` + énum métier ;
-  - données personnelles → **hard delete réel + `audit_log`** (conformité **LPD**). Le soft-delete déguisé sur des données personnelles est une non-conformité, pas un choix technique.
 - **Interdits** (lint rules `gsi/*` existantes ou planifiées) : `console.*` en prod, `if (user.role === …)` éparpillé, import direct de `@prisma/client`, libellé en dur dans le JSX, composant Client par défaut, `as any`, `<img>` HTML.
 - **Taille de fichier** : cible ≤ 250 LOC ; au-delà de 400 → `// EXEMPTION:` + ADR.
 
@@ -84,7 +80,7 @@ Les invariants que toute app respecte — le détail exhaustif vit dans le `proj
 
 Cette charte n'a de valeur que si elle est appliquée par défaut. Pour démarrer :
 
-1. **Réaligner le skill `gsi-webapp`** sur cette charte : corriger soft delete → 3 mécanismes LPD, Neon/Supabase → Infomaniak/data center, libellés en dur → i18n.
+1. **Réaligner le skill `gsi-webapp`** sur cette charte : corriger Neon/Supabase → Infomaniak/data center, libellés en dur → i18n.
 2. **Inventorier les apps existantes** : écarts vs cette charte → liste de dette technique par app, versionnée dans le dépôt de l'app.
-3. Tour d'équipe de 30 min : cycle de vie des entités / LPD (§3) et règle de dérogation (§5) en priorité.
+3. Tour d'équipe de 30 min : hébergement & souveraineté (§3) et règle de dérogation (§4) en priorité.
 4. Ajuster après 2–3 semaines de pratique — via PR sur ce fichier.
