@@ -1,6 +1,7 @@
 # Charte de la stack web — GSInformatique SA
 
 > **Version 1.0** · Document vivant. Toute proposition d'amendement passe par une PR sur ce fichier.
+> **Dernière modification :** 2026-06-10 · DanielVallonGSI <!-- ligne mise à jour automatiquement par le workflow GitHub -->
 > Complète les chartes [GitHub](charte-github-gsinformatique.md), [Claude](charte-claude-gsinformatique.md) et [BMad](charte-bmad-gsinformatique.md) — les quatre s'appliquent ensemble.
 > En cas de contradiction entre cette charte et un document plus ancien (dont le skill `gsi-webapp`), cette charte fait foi.
 
