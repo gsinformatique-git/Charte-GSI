@@ -1,4 +1,4 @@
-# Charte de la stack web — GSInformatique SA
+# Charte de la stack web — GSInformatique SA.
 
 > **Version 1.0** · Document vivant. Toute proposition d'amendement passe par une PR sur ce fichier.
 > Complète les chartes [GitHub](charte-github-gsinformatique.md), [Claude](charte-claude-gsinformatique.md) et [BMad](charte-bmad-gsinformatique.md) — les quatre s'appliquent ensemble.
