@@ -1,145 +1,90 @@
-# Charte d'utilisation GitHub — GSInformatique SA
+# Charte de la stack web — GSInformatique SA
 
-> **Version 1.1** · Document vivant. Toute proposition d'amendement passe par une PR sur ce fichier.
-> Voir aussi la [Charte Claude](charte-claude-gsinformatique.md) pour le développement assisté par IA.
+> **Version 1.0** · Document vivant. Toute proposition d'amendement passe par une PR sur ce fichier.
+> Complète les chartes [GitHub](charte-github-gsinformatique.md), [Claude](charte-claude-gsinformatique.md) et [BMad](charte-bmad-gsinformatique.md) — les quatre s'appliquent ensemble.
+> En cas de contradiction entre cette charte et un document plus ancien (dont le skill `gsi-webapp`), cette charte fait foi.
 
 ## Objectif
 
-Donner à toute l'équipe (Suisse / France / Algérie, travail asynchrone) des réflexes communs et explicites pour collaborer sur GitHub sans friction et sans surprise. La charte privilégie la simplicité : on optimise pour une équipe distribuée et hétérogène, pas pour un process maximal.
+Garantir que toutes les applications web GSI partagent la même stack, les mêmes patterns et les mêmes conventions — pour qu'un développeur (humain ou agent) qui change de projet retrouve immédiatement ses repères, et que les acquis d'un projet profitent à tous. La charte nomme les briques et les règles ; le détail vivant (versions exactes, patterns, exemples canoniques) habite le **socle GSI** — le dépôt modèle interne qui porte la stack et les packages partagés `@gsi/*`.
 
 **Trois principes directeurs :**
 
-1. `main` est toujours déployable.
-2. Tout passe par une Pull Request — jamais de push direct sur `main`.
-3. Un secret ne rentre jamais dans un dépôt.
+1. **Une seule stack pour toutes les apps.** On reproduit les patterns validés du socle, on ne réinvente pas.
+2. **Les technos sont dans la charte, les versions dans le socle.** La charte ne se périme pas à chaque upgrade.
+3. **Toute dérogation est un ADR validé** — jamais une exception silencieuse.
 
----
+***
 
-## 1. Branches & commits
+## 1\. La stack de référence
 
-### Modèle de branches — GitHub Flow adapté
+| Couche | Brique | Rôle |
+| ------ | ------ | ---- |
+| Framework | **Next.js** (App Router, RSC, Server Actions) + **React** | Server Components par défaut, Client Components justifiés |
+| Langage | **TypeScript strict** sur **Node.js** | Pas de `as any` |
+| Styling | **Tailwind CSS** (config CSS-first) | Design tokens partagés via `@gsi/ui` |
+| ORM | **Prisma** (double schéma `common` + `tenant`) | Isolation tenant, accès uniquement via `@gsi/db` |
+| BDD | **PostgreSQL** | `timestamptz`, `snake_case` via `@map` |
+| Stockage objets | **MinIO** | Auto-hébergé |
+| Auth | **Auth.js** Credentials + **TOTP** | 4 rôles, matrice de permissions ; pas de provider OAuth externe |
+| i18n | **next-intl** (fr/en/de/it, défaut `fr-CH`) | Aucun libellé en dur |
+| Validation | **Zod** à toute frontière HTTP | Erreurs métier via `DomainError` → `handleDomainError` |
+| Tests | **Vitest** (unit/intégration) + **Playwright** (E2E) | Preuve navigateur exigée (charte Claude §3) |
+| Lint | **ESLint** + règles custom `gsi/*` | Les conventions deviennent des lint rules dès que possible |
+| Monorepo | **Turborepo + pnpm** | Socle et packages `@gsi/*` |
+| Logs | **Pino** via `@gsi/logging` | Jamais `console.*` en prod |
+| PDF / Excel / E-mail | **@react-pdf/renderer** · **write-excel-file** · **Nodemailer** | Génération côté serveur |
+| Hash | **bcryptjs** | Pas de dépendance native |
 
-- **`main`** : branche de référence, toujours déployable, protégée (voir §4 et §5). On ne pousse jamais directement dessus.
-- **Branches de travail** : courtes (idéalement mergées en quelques jours), créées depuis `main`, supprimées après merge.
-- **Branches d'intégration** : pour un gros chantier qui s'étale dans le temps (ex. une réécriture), on crée une branche longue (ex. `multi-tenant-rewrite`) sur laquelle on greffe des sous-branches courtes. Elle est mergée dans `main` une fois stabilisée.
+**Versions : le socle fait foi.** Les versions exactes (Next 16, Prisma 6, PostgreSQL 16-17…) vivent dans le `package.json` et le `CLAUDE.md` du socle — pas ici. **Règle d'upgrade** : toute montée de version majeure se valide d'abord sur le socle, puis se propage aux apps ; jamais l'inverse.
 
-### Convention de nommage des branches
+***
 
-```
-type/description-courte
-```
+## 2\. Conventions cardinales
 
-Types : `feat`, `fix`, `refactor`, `chore`, `docs`, `test`.
+Les invariants que toute app respecte — le détail exhaustif vit dans le `project-context.md` du socle, qui **fait foi** ; la charte ne le duplique pas.
 
-Exemples : `feat/datalist-pagination`, `fix/contact-civilite-abreviation`, `refactor/auth-common`.
+* **Langue** : français métier / anglais techno dans le code (`civilites`, `findContactById`) ; doc, commits et messages utilisateur **100 % français**.
+* **IDs** : `BigInt @id` pour les entités métier (sérialisées en `string` côté API) ; `String cuid` pour `User`.
+* **Financier** : `Decimal` Prisma — jamais `number` JS ; devises ISO 4217, locales BCP 47.
+* **Cycle de vie des entités — 3 mécanismes strictement séparés** :
+    * référentiels → flag `estSelectionnable` ;
+    * transactionnel → champ `statut` + énum métier ;
+    * données personnelles → **hard delete réel + `audit_log`** (conformité **LPD**). Le soft-delete déguisé sur des données personnelles est une non-conformité, pas un choix technique.
+* **Interdits** (lint rules `gsi/*` existantes ou planifiées) : `console.*` en prod, `if (user.role === …)` éparpillé, import direct de `@prisma/client`, libellé en dur dans le JSX, composant Client par défaut, `as any`, `<img>` HTML.
+* **Taille de fichier** : cible ≤ 250 LOC ; au-delà de 400 → `// EXEMPTION:` + ADR.
 
-### Messages de commit — Conventional Commits
+***
 
-```
-type(scope): description à l'impératif
-```
+## 3\. Hébergement & services — souveraineté
 
-- **Types** : `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `perf`, `style`.
-- **Scope** : optionnel, le module concerné (ex. `auth`, `datalist`, `contact`).
-- **Langue** : une seule par dépôt, choisie une fois pour toutes. Recommandé : anglais pour les commits techniques, français pour la doc métier.
+* **Hébergement : Infomaniak ou le data center GSI.** Jamais Vercel, AWS, Azure, Cloudflare, Netlify, Fly.io ou équivalent.
+* **Tout service de la stack doit être auto-hébergeable** (PostgreSQL, MinIO, SMTP, monitoring…). Un SaaS externe (Neon, Supabase, Sentry cloud, Stripe SaaS…) est interdit sauf dérogation §4.
+* Le **pourquoi** : maîtrise des données (LPD, clientèle suisse), indépendance vis-à-vis des hyperscalers, prévisibilité des coûts. Ce n'est pas une préférence, c'est un engagement vis-à-vis des clients.
 
-Exemples :
-```
-feat(datalist): add server-side pagination
-fix(contact): correct civilité abbreviation mapping
-docs(dette-technique): close BACKFILL-DUAL-MUTATIONS
-```
+***
 
-### Règle d'or — granularité
+## 4\. Dérogations — ADR \+ validation référent
 
-**1 commit = 1 chose qui fonctionne.** Smoke test avant et après. Si un changement ne tient pas dans un commit cohérent et testable, c'est qu'il doit être découpé. Cette règle s'applique aussi aux commits générés via Claude Code.
+* Toute brique hors stack (lib, BDD, service, hébergeur imposé par un client…) exige un **ADR motivé** — besoin, alternatives standard écartées, plan de sortie — **validé par le référent avant usage**, pas après.
+* Une dérogation adoptée par un **2ᵉ puis 3ᵉ projet** devient candidate au standard : on amende la charte plutôt que de multiplier les exceptions (Rule of Three).
+* Une brique hors stack découverte **sans ADR** est une dette : on la régularise (ADR rétroactif ou retrait) dès sa découverte.
 
----
+***
 
-## 2. Pull Requests & reviews
+## 5\. Gouvernance
 
-### Ouverture
+* **Référent** (le même que pour les chartes Claude et BMad) : garde la cohérence socle ↔ apps, valide les ADRs de dérogation, pilote les upgrades majeurs et la publication des `@gsi/*`.
+* **Revue annuelle** de la charte, alignée sur les trois autres. Un changement majeur d'une brique structurante (Next, Prisma, Auth.js) déclenche une relecture sans attendre.
+* Les conventions ont vocation à devenir des **lint rules** : une règle qui reste « de la discipline » est une règle qui finira par être violée.
 
-- Toute intégration dans `main` (ou dans une branche d'intégration) passe par une PR.
-- **Taille** : viser des PR courtes (< ~400 lignes modifiées). Une grosse PR est difficile à relire en async et retarde tout le monde. On découpe.
-- **Description obligatoire**, en trois points :
-  - **Quoi** : ce que fait la PR.
-  - **Pourquoi** : le besoin ou le bug derrière.
-  - **Comment tester** : les étapes pour valider, surtout utile pour une review en décalé horaire.
-
-### Review
-
-- **Au moins 1 review approuvée** avant merge. C'est non négociable, y compris pour les profils seniors.
-- *(Amendement v1.1)* La review peut être portée par une **revue LLM croisée** (un modèle différent de celui qui a écrit le code relit et approuve), tracée dans l'historique Git — conditions et traçabilité dans la [Charte Claude §3](charte-claude-gsinformatique.md#3-review--responsabilité). La review humaine reste précieuse comme outil de partage de connaissance dans une équipe hétérogène, et reste requise sur les sujets sensibles listés dans le `CLAUDE.md` du dépôt.
-- Le reviewer relit le **quoi** et le **comment**, pas seulement la syntaxe.
-- En cas de désaccord bloquant, on tranche en synchrone (visio courte) plutôt qu'en fil de commentaires interminable.
-
-### Merge
-
-- **CI verte obligatoire** avant merge (lint, build, tests).
-- **Squash merge** recommandé : un historique `main` propre, une PR = une entrée lisible.
-- L'auteur supprime sa branche après merge.
-
----
-
-## 3. Sécurité & secrets
-
-> Pilier prioritaire. Une fuite de credentials est coûteuse et difficile à corriger après coup.
-
-### Règles fermes
-
-- **Aucun secret dans un dépôt** : mots de passe, clés API, chaînes de connexion DB, tokens, fichiers `.env`. Jamais, même temporairement, même dans une branche, même dans un fichier de config destiné à Claude (`CLAUDE.md`, `architect-context.md`, etc.).
-- Les secrets vivent dans des **variables d'environnement** ou un gestionnaire de secrets, jamais versionnés.
-- Chaque dépôt a un **`.gitignore` robuste** dès sa création : `.env`, `*.local`, `*.key`, dumps DB, etc.
-- Fournir un **`.env.example`** documentant les variables attendues, sans les valeurs.
-
-### Détection
-
-- Activer **GitHub Secret Scanning** + **Push Protection** sur l'organisation : GitHub bloque le push si un secret est détecté.
-
-### En cas de fuite
-
-Si un secret a été commité par erreur :
-
-1. **Révoquer / régénérer immédiatement** le secret concerné (clé API, mot de passe DB…). Le supprimer du code ne suffit pas : il reste dans l'historique Git et a pu être cloné.
-2. Purger l'historique si nécessaire (`git filter-repo`) — en coordination, car ça réécrit l'historique partagé.
-3. Documenter l'incident.
-
----
-
-## 4. Gouvernance & accès
-
-### Organisation
-
-- Un compte **Organisation GitHub** unique pour GSInformatique (pas de dépôts dispersés sur des comptes perso).
-- **Équipes GitHub par rôle** (ex. `dev`, `lead`, `admin`) plutôt que des droits attribués individuellement, dépôt par dépôt.
-
-### Droits — principe du moindre privilège
-
-- Chacun reçoit le niveau d'accès minimal nécessaire (`write` pour les devs, `maintain`/`admin` réservés).
-- Le rôle **Owner** est limité à 2 personnes maximum (toi + un suppléant), pour éviter le point de défaillance unique.
-- Revue des accès au moins une fois par an, et au départ/arrivée de chaque collaborateur.
-
-### Dépôts
-
-- **Convention de nommage** cohérente : `GSI-<PROJET>` (ex. `GSI-MODELEMT`).
-- Chaque dépôt contient au minimum un **`README.md`** (quoi, comment lancer en local) et une copie/lien vers cette charte (`CONTRIBUTING.md`).
-
-### Protection de `main`
-
-Branch protection à activer sur `main` de chaque dépôt actif :
-
-- Push direct interdit.
-- PR requise avec ≥ 1 approbation.
-- Statuts CI requis avant merge.
-- Historique linéaire (cohérent avec le squash merge).
-
----
+***
 
 ## Adoption
 
 Cette charte n'a de valeur que si elle est appliquée par défaut. Pour démarrer :
 
-1. Activer la branch protection et le secret scanning sur `GSI-MODELEMT` (dépôt pilote).
-2. Faire un tour d'équipe de 30 min pour présenter les conventions de commits et de PR.
-3. Ajuster après 2–3 semaines de pratique — via PR sur ce fichier.
+1. **Réaligner le skill `gsi-webapp`** sur cette charte : corriger soft delete → 3 mécanismes LPD, Neon/Supabase → Infomaniak/data center, libellés en dur → i18n.
+2. **Inventorier les apps existantes** : écarts vs cette charte → liste de dette technique par app, versionnée dans le dépôt de l'app.
+3. Tour d'équipe de 30 min : cycle de vie des entités / LPD (§3) et règle de dérogation (§5) en priorité.
+4. Ajuster après 2–3 semaines de pratique — via PR sur ce fichier.
