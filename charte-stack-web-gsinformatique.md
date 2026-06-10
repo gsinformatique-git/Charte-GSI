@@ -2,15 +2,15 @@
 
 > **Version 1.0** · Document vivant. Toute proposition d'amendement passe par une PR sur ce fichier.
 > Complète les chartes [GitHub](charte-github-gsinformatique.md), [Claude](charte-claude-gsinformatique.md) et [BMad](charte-bmad-gsinformatique.md) — les quatre s'appliquent ensemble.
-> **Référence vivante : le socle `gsi-modeleMT`.** En cas de contradiction entre cette charte et un document plus ancien (dont le skill `gsi-webapp`), le socle et cette charte font foi.
+> En cas de contradiction entre cette charte et un document plus ancien (dont le skill `gsi-webapp`), cette charte fait foi.
 
 ## Objectif
 
-Garantir que toutes les applications web GSI partagent la même stack, les mêmes patterns et les mêmes conventions — pour qu'un développeur (humain ou agent) qui change de projet retrouve immédiatement ses repères, et que les acquis d'un projet profitent à tous. La charte nomme les briques et les règles ; le détail vivant (versions exactes, patterns, exemples canoniques) habite le socle `gsi-modeleMT`.
+Garantir que toutes les applications web GSI partagent la même stack, les mêmes patterns et les mêmes conventions — pour qu'un développeur (humain ou agent) qui change de projet retrouve immédiatement ses repères, et que les acquis d'un projet profitent à tous. La charte nomme les briques et les règles ; le détail vivant (versions exactes, patterns, exemples canoniques) habite le **socle GSI** — le dépôt modèle interne qui porte la stack et les packages partagés `@gsi/*`.
 
 **Trois principes directeurs :**
 
-1. **Une seule stack, un seul exemple canonique.** On imite le socle, on ne réinvente pas.
+1. **Une seule stack pour toutes les apps.** On reproduit les patterns validés du socle, on ne réinvente pas.
 2. **Les technos sont dans la charte, les versions dans le socle.** La charte ne se périme pas à chaque upgrade.
 3. **Toute dérogation est un ADR validé** — jamais une exception silencieuse.
 
@@ -40,17 +40,7 @@ Garantir que toutes les applications web GSI partagent la même stack, les même
 
 ---
 
-## 2. Architecture — le socle et les apps
-
-- **`gsi-modeleMT` est le socle** : `apps/admin` + packages `@gsi/*` + outillage + conventions. C'est la **référence canonique** de toute nouvelle app.
-- **Chaque app cliente** (ERP, Conservatoire, GED, MyAccessWeb…) vit **dans son propre dépôt** et consomme les `@gsi/*` publiés (registre privé).
-- **Promotion par la Rule of Three** : un module naît local à son app ; il est promu en `@gsi/modules-*` dès le **2ᵉ consommateur**, avec mini-ADR. On ne crée jamais un module directement dans le socle par spéculation.
-- **L'exemple à imiter** : le module Contact (`@gsi/modules-contact`), le plus mature. Réflexe avant de coder : « où est l'exemple canonique ? »
-- **Le pattern standalone historique** (skill `gsi-webapp`, POC) est **déprécié pour toute nouvelle app**. Ses règles contraires au socle — soft delete `estActif` sur données personnelles, libellés UI en dur, BDD Neon/Supabase — sont **caduques** ; le skill sera réaligné (voir Adoption).
-
----
-
-## 3. Conventions cardinales
+## 2. Conventions cardinales
 
 Les invariants que toute app respecte — le détail exhaustif vit dans le `project-context.md` du socle, qui **fait foi** ; la charte ne le duplique pas.
 
@@ -60,29 +50,29 @@ Les invariants que toute app respecte — le détail exhaustif vit dans le `proj
 - **Cycle de vie des entités — 3 mécanismes strictement séparés** :
   - référentiels → flag `estSelectionnable` ;
   - transactionnel → champ `statut` + énum métier ;
-  - données personnelles → **hard delete réel + `audit_log`** (conformité **LPD**, ADR-001). Le soft-delete déguisé sur des données personnelles est une non-conformité, pas un choix technique.
+  - données personnelles → **hard delete réel + `audit_log`** (conformité **LPD**). Le soft-delete déguisé sur des données personnelles est une non-conformité, pas un choix technique.
 - **Interdits** (lint rules `gsi/*` existantes ou planifiées) : `console.*` en prod, `if (user.role === …)` éparpillé, import direct de `@prisma/client`, libellé en dur dans le JSX, composant Client par défaut, `as any`, `<img>` HTML.
 - **Taille de fichier** : cible ≤ 250 LOC ; au-delà de 400 → `// EXEMPTION:` + ADR.
 
 ---
 
-## 4. Hébergement & services — souveraineté
+## 3. Hébergement & services — souveraineté
 
 - **Hébergement : Infomaniak ou le data center GSI.** Jamais Vercel, AWS, Azure, Cloudflare, Netlify, Fly.io ou équivalent.
-- **Tout service de la stack doit être auto-hébergeable** (PostgreSQL, MinIO, SMTP, monitoring…). Un SaaS externe (Neon, Supabase, Sentry cloud, Stripe SaaS…) est interdit sauf dérogation §5.
+- **Tout service de la stack doit être auto-hébergeable** (PostgreSQL, MinIO, SMTP, monitoring…). Un SaaS externe (Neon, Supabase, Sentry cloud, Stripe SaaS…) est interdit sauf dérogation §4.
 - Le **pourquoi** : maîtrise des données (LPD, clientèle suisse), indépendance vis-à-vis des hyperscalers, prévisibilité des coûts. Ce n'est pas une préférence, c'est un engagement vis-à-vis des clients.
 
 ---
 
-## 5. Dérogations — ADR + validation référent
+## 4. Dérogations — ADR + validation référent
 
 - Toute brique hors stack (lib, BDD, service, hébergeur imposé par un client…) exige un **ADR motivé** — besoin, alternatives standard écartées, plan de sortie — **validé par le référent avant usage**, pas après.
-- Une dérogation adoptée par un **2ᵉ puis 3ᵉ projet** devient candidate au standard : on amende la charte plutôt que de multiplier les exceptions (même Rule of Three que pour les modules).
+- Une dérogation adoptée par un **2ᵉ puis 3ᵉ projet** devient candidate au standard : on amende la charte plutôt que de multiplier les exceptions (Rule of Three).
 - Une brique hors stack découverte **sans ADR** est une dette : on la régularise (ADR rétroactif ou retrait) dès sa découverte.
 
 ---
 
-## 6. Gouvernance
+## 5. Gouvernance
 
 - **Référent** (le même que pour les chartes Claude et BMad) : garde la cohérence socle ↔ apps, valide les ADRs de dérogation, pilote les upgrades majeurs et la publication des `@gsi/*`.
 - **Revue annuelle** de la charte, alignée sur les trois autres. Un changement majeur d'une brique structurante (Next, Prisma, Auth.js) déclenche une relecture sans attendre.
@@ -94,7 +84,7 @@ Les invariants que toute app respecte — le détail exhaustif vit dans le `proj
 
 Cette charte n'a de valeur que si elle est appliquée par défaut. Pour démarrer :
 
-1. **Réaligner le skill `gsi-webapp`** sur le socle : corriger soft delete → 3 mécanismes LPD, Neon/Supabase → Infomaniak/data center, libellés en dur → i18n.
+1. **Réaligner le skill `gsi-webapp`** sur cette charte : corriger soft delete → 3 mécanismes LPD, Neon/Supabase → Infomaniak/data center, libellés en dur → i18n.
 2. **Inventorier les apps existantes** : écarts vs cette charte → liste de dette technique par app, versionnée dans le dépôt de l'app.
 3. Tour d'équipe de 30 min : cycle de vie des entités / LPD (§3) et règle de dérogation (§5) en priorité.
 4. Ajuster après 2–3 semaines de pratique — via PR sur ce fichier.
