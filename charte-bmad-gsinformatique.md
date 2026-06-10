@@ -1,116 +1,90 @@
-# Charte d'utilisation de BMad — GSInformatique SA
+# Charte de la stack web — GSInformatique SA
 
 > **Version 1.0** · Document vivant. Toute proposition d'amendement passe par une PR sur ce fichier.
-> Complète les chartes [GitHub](charte-github-gsinformatique.md), [Claude](charte-claude-gsinformatique.md) et [Stack web](charte-stack-web-gsinformatique.md) — les quatre s'appliquent ensemble.
-> **BMad est obligatoire sur tout projet GSI livrant du code.**
+> Complète les chartes [GitHub](charte-github-gsinformatique.md), [Claude](charte-claude-gsinformatique.md) et [BMad](charte-bmad-gsinformatique.md) — les quatre s'appliquent ensemble.
+> En cas de contradiction entre cette charte et un document plus ancien (dont le skill `gsi-webapp`), cette charte fait foi.
 
 ## Objectif
 
-Donner à toute l'équipe (Suisse / France / Algérie, travail asynchrone) un cadre commun pour développer avec la méthode BMad : artefacts de cadrage, cycle de story, suivi d'avancement. La charte officialise la pratique éprouvée sur le dépôt pilote `gsi-modeleMT` — North Star → stories → dev TDD → revue croisée → done — et la rend applicable à tous les dépôts. C'est ce cadrage qui rend possible l'autonomie des agents décrite dans la charte Claude : un agent ne peut travailler seul que si le quoi, le pourquoi et les règles sont écrits quelque part.
+Garantir que toutes les applications web GSI partagent la même stack, les mêmes patterns et les mêmes conventions — pour qu'un développeur (humain ou agent) qui change de projet retrouve immédiatement ses repères, et que les acquis d'un projet profitent à tous. La charte nomme les briques et les règles ; le détail vivant (versions exactes, patterns, exemples canoniques) habite le **socle GSI** — le dépôt modèle interne qui porte la stack et les packages partagés `@gsi/*`.
 
 **Trois principes directeurs :**
 
-1. **Pas de code sans story, pas de story sans North Star.** Tout changement se rattache à une intention écrite et traçable.
-2. **Le cycle est standard, les personas sont libres.** Un dev qui change de projet retrouve le même cycle partout ; chaque projet choisit ses agents.
-3. **Les artefacts BMad sont du code.** Versionnés, relus, maintenus — un artefact périmé est un bug de documentation.
+1. **Une seule stack pour toutes les apps.** On reproduit les patterns validés du socle, on ne réinvente pas.
+2. **Les technos sont dans la charte, les versions dans le socle.** La charte ne se périme pas à chaque upgrade.
+3. **Toute dérogation est un ADR validé** — jamais une exception silencieuse.
 
----
+***
 
-## 1. Périmètre & installation
+## 1\. La stack de référence
 
-### Périmètre — tout code livré
+| Couche | Brique | Rôle |
+| ------ | ------ | ---- |
+| Framework | **Next.js** (App Router, RSC, Server Actions) + **React** | Server Components par défaut, Client Components justifiés |
+| Langage | **TypeScript strict** sur **Node.js** | Pas de `as any` |
+| Styling | **Tailwind CSS** (config CSS-first) | Design tokens partagés via `@gsi/ui` |
+| ORM | **Prisma** (double schéma `common` + `tenant`) | Isolation tenant, accès uniquement via `@gsi/db` |
+| BDD | **PostgreSQL** | `timestamptz`, `snake_case` via `@map` |
+| Stockage objets | **MinIO** | Auto-hébergé |
+| Auth | **Auth.js** Credentials + **TOTP** | 4 rôles, matrice de permissions ; pas de provider OAuth externe |
+| i18n | **next-intl** (fr/en/de/it, défaut `fr-CH`) | Aucun libellé en dur |
+| Validation | **Zod** à toute frontière HTTP | Erreurs métier via `DomainError` → `handleDomainError` |
+| Tests | **Vitest** (unit/intégration) + **Playwright** (E2E) | Preuve navigateur exigée (charte Claude §3) |
+| Lint | **ESLint** + règles custom `gsi/*` | Les conventions deviennent des lint rules dès que possible |
+| Monorepo | **Turborepo + pnpm** | Socle et packages `@gsi/*` |
+| Logs | **Pino** via `@gsi/logging` | Jamais `console.*` en prod |
+| PDF / Excel / E-mail | **@react-pdf/renderer** · **write-excel-file** · **Nodemailer** | Génération côté serveur |
+| Hash | **bcryptjs** | Pas de dépendance native |
 
-- BMad s'applique à **tout dépôt qui produit du code maintenu** : socle (`gsi-modeleMT`), apps clientes (ERP, Conservatoire, GED, MyAccessWeb…), migrations WinDev, outils internes.
-- **Seules exceptions** : scripts jetables et POC, à condition d'être **explicitement marqués comme tels** dans le README du dépôt. Un POC qui devient un produit entre dans le périmètre — avec rattrapage du North Star avant toute nouvelle fonctionnalité.
+**Versions : le socle fait foi.** Les versions exactes (Next 16, Prisma 6, PostgreSQL 16-17…) vivent dans le `package.json` et le `CLAUDE.md` du socle — pas ici. **Règle d'upgrade** : toute montée de version majeure se valide d'abord sur le socle, puis se propage aux apps ; jamais l'inverse.
 
-### Installation — dès le jour 1
+***
 
-- BMad s'installe **à la création du dépôt**, au même titre que le kit garde-fous de la [Charte Claude §4](charte-claude-gsinformatique.md#4-autonomie-des-agents) dont il fait partie.
-- **Config** : `_bmad/config.toml` est géré par l'installeur — on ne l'édite jamais directement. Les choix d'équipe vivent dans `_bmad/custom/config.toml` (commité), les préférences personnelles dans `_bmad/custom/config.user.toml` (gitignoré).
-- **Langue des artefacts : français** (`document_output_language = "French"`), conforme aux conventions GSI.
-- Les artefacts vivent dans **`_bmad-output/`**, versionné dans le dépôt.
+## 2\. Conventions cardinales
 
----
+Les invariants que toute app respecte — le détail exhaustif vit dans le `project-context.md` du socle, qui **fait foi** ; la charte ne le duplique pas.
 
-## 2. North Star — obligatoire avant le code
+* **Langue** : français métier / anglais techno dans le code (`civilites`, `findContactById`) ; doc, commits et messages utilisateur **100 % français**.
+* **IDs** : `BigInt @id` pour les entités métier (sérialisées en `string` côté API) ; `String cuid` pour `User`.
+* **Financier** : `Decimal` Prisma — jamais `number` JS ; devises ISO 4217, locales BCP 47.
+* **Cycle de vie des entités — 3 mécanismes strictement séparés** :
+    * référentiels → flag `estSelectionnable` ;
+    * transactionnel → champ `statut` + énum métier ;
+    * données personnelles → **hard delete réel + `audit_log`** (conformité **LPD**). Le soft-delete déguisé sur des données personnelles est une non-conformité, pas un choix technique.
+* **Interdits** (lint rules `gsi/*` existantes ou planifiées) : `console.*` en prod, `if (user.role === …)` éparpillé, import direct de `@prisma/client`, libellé en dur dans le JSX, composant Client par défaut, `as any`, `<img>` HTML.
+* **Taille de fichier** : cible ≤ 250 LOC ; au-delà de 400 → `// EXEMPTION:` + ADR.
 
-Aucune story ne se crée tant que les quatre artefacts North Star ne sont pas en place :
+***
 
-| Artefact | Rôle |
-|---|---|
-| **`project-brief.md`** | Le **pourquoi** du projet — besoin, valeur, périmètre |
-| **`architecture.md`** | Le **comment** — structure cible, choix techniques |
-| **`project-context.md`** | Les **règles cardinales** pour les agents IA — la source de vérité |
-| **`epics.md`** | Le **backlog** structuré en épics et stories |
+## 3\. Hébergement & services — souveraineté
 
-- **`project-context.md` fait autorité** : en cas de contradiction avec un autre document, c'est lui (et les ADRs) qu'on suit. Le `CLAUDE.md` du dépôt reste lean et **renvoie** vers lui — il ne le duplique pas (pattern gsi-modeleMT).
-- Le North Star est **amendé par PR** comme le reste du code. Une décision qui le contredit passe par un **ADR**, pas par une dérive silencieuse.
-- L'investissement de départ est assumé : c'est lui qui permet ensuite les runs autonomes et l'arrivée d'un nouveau dev (humain ou agent) sans transfert oral.
+* **Hébergement : Infomaniak ou le data center GSI.** Jamais Vercel, AWS, Azure, Cloudflare, Netlify, Fly.io ou équivalent.
+* **Tout service de la stack doit être auto-hébergeable** (PostgreSQL, MinIO, SMTP, monitoring…). Un SaaS externe (Neon, Supabase, Sentry cloud, Stripe SaaS…) est interdit sauf dérogation §4.
+* Le **pourquoi** : maîtrise des données (LPD, clientèle suisse), indépendance vis-à-vis des hyperscalers, prévisibilité des coûts. Ce n'est pas une préférence, c'est un engagement vis-à-vis des clients.
 
----
+***
 
-## 3. Cycle de story — le standard GSI
+## 4\. Dérogations — ADR \+ validation référent
 
-### Le cycle, identique sur tous les projets
+* Toute brique hors stack (lib, BDD, service, hébergeur imposé par un client…) exige un **ADR motivé** — besoin, alternatives standard écartées, plan de sortie — **validé par le référent avant usage**, pas après.
+* Une dérogation adoptée par un **2ᵉ puis 3ᵉ projet** devient candidate au standard : on amende la charte plutôt que de multiplier les exceptions (Rule of Three).
+* Une brique hors stack découverte **sans ADR** est une dette : on la régularise (ADR rétroactif ou retrait) dès sa découverte.
 
-```
-create-story → dev (TDD) → revue LLM croisée → done → sprint-status à jour
-```
+***
 
-- **L'orchestrateur crée les stories et ne code jamais** ; il délègue l'implémentation à l'agent dev. Séparation stricte des rôles.
-- **L'agent dev implémente en TDD**, dans le respect du `project-context.md`.
-- **Un modèle différent relit** — conditions et traçabilité dans la [Charte Claude §3](charte-claude-gsinformatique.md#3-review--responsabilité).
-- **Le fichier de story est le dossier de la story** : AC cochés, Completion Notes, File List, Change Log. Tout arbitrage pris en cours de route (par un humain ou un agent) y est **gravé au Change Log**.
+## 5\. Gouvernance
 
-### Suivi — `sprint-status.yaml`
+* **Référent** (le même que pour les chartes Claude et BMad) : garde la cohérence socle ↔ apps, valide les ADRs de dérogation, pilote les upgrades majeurs et la publication des `@gsi/*`.
+* **Revue annuelle** de la charte, alignée sur les trois autres. Un changement majeur d'une brique structurante (Next, Prisma, Auth.js) déclenche une relecture sans attendre.
+* Les conventions ont vocation à devenir des **lint rules** : une règle qui reste « de la discipline » est une règle qui finira par être violée.
 
-- `sprint-status.yaml` est la **source de vérité de l'avancement** : toute story y a un état à jour (backlog, in-progress, review, done, parked).
-- Une story **parked** porte un **motif réel et vérifiable** (dépendance précise, décision en attente, échéance) — jamais un motif générique.
-
-### Personas — libres par projet
-
-- Chaque projet choisit ses agents/personas (Winston, Amelia, ou d'autres) et les **déclare dans son `CLAUDE.md`**.
-- Ce qui est non négociable, c'est le cycle et la séparation des rôles ci-dessus — pas les noms.
-
----
-
-## 4. Circuit court — `quick-dev` pour le trivial
-
-Tout ne mérite pas une story formelle. Le circuit court officiel est **`bmad-quick-dev`** (ou équivalent), réservé aux changements **triviaux** :
-
-- **≤ ~50 lignes modifiées** ;
-- **zéro changement de comportement métier** ;
-- **zéro changement de schéma de données, d'auth ou de permissions**.
-
-Restent obligatoires même en quick-dev : **commit conventionnel, revue LLM croisée, CI verte**. La documentation pure (typo, reformulation) est dispensée de story mais pas de PR.
-
-**En cas de doute sur le caractère trivial : story.** Un « petit fix » qui touche au métier n'est pas trivial.
-
----
-
-## 5. Runs autonomes
-
-Les runs autonomes (`/autonomie-globale`, story-automator) sont soumis aux conditions de la [Charte Claude §4](charte-claude-gsinformatique.md#4-autonomie-des-agents) (garde-fous verts, lignes rouges), plus trois exigences propres à BMad :
-
-1. **Dry-run avant le run** : cartographie des stories candidates (proceed / park avec motif) validée avant de lancer. On ne lance pas un run autonome sur un backlog flou.
-2. **Handoff documenté en fin de run** : un document de passation (`HANDOFF-run-autonome-<date>.md`) résume ce qui a été fait, les arbitrages pris et ce qui reste — l'humain qui supervise a posteriori lit ça, pas 200 commits.
-3. **Stories sensibles → session supervisée** : toute story touchant les garde-fous eux-mêmes (self-modification, lint rules de conformité, zones suspendues) est exclue des runs autonomes et se traite avec un humain dans la boucle.
-
----
-
-## 6. Hygiène & gouvernance
-
-- **Clôture d'épic = passe d'hygiène documentaire** : à chaque épic terminé, on vérifie que le North Star, les conventions et le `CLAUDE.md` reflètent l'état réel (convention `cloture-epic-hygiene-docs` du socle). Un épic n'est pas fini tant que la doc ment.
-- **Mises à jour de BMad** (installeur, nouvelles versions de workflows) : par le **référent** (le même que pour la charte Claude), testées sur le socle avant généralisation.
-- **Revue annuelle** de la charte, alignée sur celles des chartes GitHub et Claude. Un changement majeur de BMad déclenche une relecture sans attendre.
-
----
+***
 
 ## Adoption
 
 Cette charte n'a de valeur que si elle est appliquée par défaut. Pour démarrer :
 
-1. Inventorier les dépôts actifs : BMad installé ? North Star complet ? Combler les manques avant toute nouvelle fonctionnalité.
-2. `gsi-modeleMT` est la **référence canonique** : config, structure `_bmad-output/`, fichiers de story, sprint-status — à copier, pas à réinventer.
-3. Tour d'équipe de 30 min : cycle de story (§3) et frontière du quick-dev (§4) en priorité.
+1. **Réaligner le skill `gsi-webapp`** sur cette charte : corriger soft delete → 3 mécanismes LPD, Neon/Supabase → Infomaniak/data center, libellés en dur → i18n.
+2. **Inventorier les apps existantes** : écarts vs cette charte → liste de dette technique par app, versionnée dans le dépôt de l'app.
+3. Tour d'équipe de 30 min : cycle de vie des entités / LPD (§3) et règle de dérogation (§5) en priorité.
 4. Ajuster après 2–3 semaines de pratique — via PR sur ce fichier.
