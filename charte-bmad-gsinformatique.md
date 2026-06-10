@@ -1,7 +1,7 @@
 # Charte d'utilisation de BMad — GSInformatique SA
 
 > **Version 1.0** · Document vivant. Toute proposition d'amendement passe par une PR sur ce fichier.
-> Complète la [Charte GitHub](charte-github-gsinformatique.md) et la [Charte Claude](charte-claude-gsinformatique.md) — les trois s'appliquent ensemble.
+> Complète les chartes [GitHub](charte-github-gsinformatique.md), [Claude](charte-claude-gsinformatique.md) et [Stack web](charte-stack-web-gsinformatique.md) — les quatre s'appliquent ensemble.
 > **BMad est obligatoire sur tout projet GSI livrant du code.**
 
 ## Objectif
