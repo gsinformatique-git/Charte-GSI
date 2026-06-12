@@ -12,7 +12,7 @@ Donner des réflexes communs pour versionner proprement un projet de la suite PC
 
 1. **Le dépôt ne contient que les sources.** Jamais les binaires de compilation, jamais les sauvegardes locales.
 2. **Le `.gitignore` PC SOFT est un point de départ, pas une fin.** On le durcit dès la création du dépôt.
-3. **Les sources WINDEV sont binaires.** Pas de diff lisible, pas de merge textuel : on s'organise pour *éviter* les conflits, pas pour les résoudre.
+3. **Les sources WINDEV sont au format texte, largement lisibles.** Le code et la structure se diffent et se mergent ; seul l'habillage visuel (chiffré) reste opaque — on coordonne surtout les retouches d'apparence d'un même écran.
 
 ---
 
@@ -82,18 +82,25 @@ Svg_*/
 
 ---
 
-## 4. Sources binaires : diff illisible, pas de merge
+## 4. Sources au format texte : diff lisible, habillage chiffré
 
-Les éléments WinDev (`.wdw`, `.wde`, `.wdc`, `.wdg`, `.ana`…) sont des fichiers **binaires** : leurs propriétés visuelles sont stockées en base64 **chiffré**, illisible hors de l'IDE WinDev. Conséquences concrètes :
+Les éléments WinDev (`.wdw`, `.wde`, `.wdc`, `.wdg`, `.ana`…) sont stockés au **format texte**. **Ils ne sont pas opaques** : sur un projet réel, **~95 % des lignes sont lisibles** et **100 % du code WLanguage est en clair**.
 
-- **Aucun diff de relecture utile** sur ces fichiers, et **aucun merge automatique possible** — un conflit sur un élément WinDev ne se résout pas à la main dans Git.
-- **On évite les conflits au lieu de les résoudre** :
-  - **branches courtes**, mergées vite (cf. [Charte GitHub §1](charte-github-gsinformatique.md#1-branches--commits)) ;
-  - **un seul développeur à la fois** sur un même élément (fenêtre, état, requête) ; se répartir le travail par fichier, pas par ligne ;
-  - utiliser le **GDS (Gestionnaire De Sources) de WinDev** quand plusieurs personnes travaillent en parallèle — il gère le check-out/réintégration au niveau élément, là où Git ne voit qu'un blob.
-- **La review porte sur le *quoi* et le *comment tester*, pas sur le diff** (cf. [Charte GitHub §2](charte-github-gsinformatique.md#2-pull-requests--reviews)). La PR décrit le changement fonctionnel ; le reviewer valide en ouvrant le projet dans WinDev, pas en lisant le binaire. Une **preuve fonctionnelle** (capture, scénario testé) remplace la lecture de diff.
-- **Squash merge** systématique : l'historique `main` reste une suite de changements fonctionnels lisibles, à défaut de diffs lisibles.
-- **Extraction texte** : pour garder une trace relisible/diffable du code WLanguage, on peut versionner en parallèle une extraction `.txt` du code (cf. outillage d'extraction du projet) — utile pour la review et la recherche, sans remplacer les sources binaires.
+**En clair** (diffable, mergeable) :
+
+- tout le **code WLanguage** (procédures, méthodes, événements) ;
+- la **structure** des fenêtres : noms de contrôles, hiérarchie, géométrie (`x`/`y`/largeur/hauteur), ancrage, ordre de tabulation ;
+- les **libellés de fenêtres** (`caption: \n fr-FR: …`), les mappings de classes (`<mapping=…>`).
+
+**Chiffré** (base64, clé WinDev — illisible hors IDE) : **un blob `internal_properties` par contrôle/élément (~5 % des lignes)**, qui porte l'apparence fine (couleurs, polices, styles) et le **texte statique des états** (en-têtes, titres). Modifier ces éléments-là se fait dans l'**IDE WinDev**.
+
+**Conséquences concrètes :**
+
+- **Le diff de review EST utile** : on relit réellement le code et les changements de structure dans la PR (cf. [Charte GitHub §2](charte-github-gsinformatique.md#2-pull-requests--reviews)). Pour un changement **purement visuel** (couleur, police d'un état), le diff ne montre qu'un blob opaque → on complète par une **preuve fonctionnelle** (capture, aperçu PDF).
+- **Le merge Git fonctionne** pour le code et la structure. La coordination reste prudente surtout sur l'**apparence d'un même écran** : deux retouches visuelles concurrentes sur un même contrôle ne se fusionnent pas (un seul blob).
+- **Bonnes pratiques** : **branches courtes** mergées vite (cf. [Charte GitHub §1](charte-github-gsinformatique.md#1-branches--commits)) ; éviter que deux personnes retouchent **l'habillage** du même élément en parallèle. Le **GDS (Gestionnaire De Sources) WinDev** reste un confort utile pour le travail concurrent au niveau élément, **pas une nécessité** : Git suffit pour l'essentiel.
+- **Squash merge** recommandé : un historique `main` lisible, une PR = une entrée.
+- **Extraction texte (optionnelle)** : une extraction `.txt` du code WLanguage peut être versionnée en parallèle pour faciliter recherche et revue de masse — utile, mais **plus indispensable** puisque les sources sont déjà lisibles.
 
 ---
 
